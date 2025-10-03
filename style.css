@@ -1,0 +1,395 @@
+/* =======================
+   RESET & GLOBAL
+   ======================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1, h2, h3 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+/* =======================
+   HEADER & NAVBAR
+   ======================= */
+header nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 8%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+header nav .brand h1 {
+  font-size: 1.5rem;
+  color: #3498db;
+}
+
+header .user-info a {
+  margin-left: 10px;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* =======================
+   BUTTONS
+   ======================= */
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: 0.2s ease;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: #fff;
+}
+
+.btn-logout {
+  background: #ff4d4d;
+  color: #fff;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* =======================
+   LANDING PAGE (index.php)
+   ======================= */
+.hero {
+  background: linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),
+              url('uploads/hero-bg.jpg') center/cover;
+  color: #fff;
+  text-align: center;
+  padding: 100px 20px;
+}
+.hero h1 {
+  font-size: 2.8rem;
+  margin-bottom: 20px;
+}
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+}
+.hero a {
+  font-size: 1.1rem;
+  padding: 12px 24px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+  gap: 30px;
+  padding: 60px 8%;
+}
+.feature-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform .2s ease;
+}
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+.feature-card h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+.feature-card p {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.about {
+  background: #fff;
+  padding: 60px 8%;
+  text-align: center;
+}
+.about h2 {
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+.about p {
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* =======================
+   FORM RESEP
+   ======================= */
+.resep-form {
+  max-width: 800px;
+  margin: 30px auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+.resep-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.resep-form input,
+.resep-form textarea,
+.resep-form select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fafafa;
+  margin-bottom: 15px;
+}
+.resep-form input:focus,
+.resep-form textarea:focus,
+.resep-form select:focus {
+  border-color: #3498db;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+  outline: none;
+}
+.resep-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+.resep-form img {
+  margin-top: 10px;
+  max-width: 250px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+/* =======================
+   DASHBOARD
+   ======================= */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.resep-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+.resep-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease;
+}
+.resep-card:hover { transform: translateY(-4px); }
+.resep-thumbnail {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+/* =======================
+   FOOTER
+   ======================= */
+footer {
+  background: #222;
+  color: #aaa;
+  text-align: center;
+  padding: 20px;
+  margin-top: 50px;
+}
+
+
+/* =======================
+   KALKULATOR RESEP
+   ======================= */
+.calculator-divider {
+  margin: 25px 0;
+  border: none;
+  border-top: 2px dashed #ddd;
+}
+
+#tabel-resep {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+#tabel-resep th, 
+#tabel-resep td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+#tabel-resep th {
+  background: #f9f9f9;
+  font-weight: 600;
+}
+
+#tabel-resep input, 
+#tabel-resep select {
+  width: 95%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+#tabel-resep .biaya-bahan {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Tombol Tambah & Hapus Baris */
+.btn-add {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  margin-top: 15px;
+}
+.btn-remove {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-remove:hover {
+  opacity: 0.9;
+}
+
+/* Ringkasan Total */
+.total-cost {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.total-cost span {
+  color: #444;
+}
+#total-biaya-resep {
+  color: #007bff;
+  font-size: 1.3rem;
+}
+
+/* Kalkulator Harga */
+.price-calculator {
+  margin-top: 20px;
+}
+.price-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.summary-item {
+  flex: 1;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  text-align: center;
+}
+.summary-item span {
+  display: block;
+  color: #555;
+  margin-bottom: 8px;
+}
+.summary-item strong {
+  font-size: 1.3rem;
+  color: #007bff;
+}
+.final-price strong {
+  color: #28a745;
+  font-size: 1.5rem;
+}
+
+/* =======================
+   DRAFT MANAGER
+   ======================= */
+.draft-manager {
+  margin-bottom: 20px;
+}
+.draft-manager .form-group {
+  margin-bottom: 12px;
+}
+.draft-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* =======================
+   ANIMASI HALUS
+   ======================= */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,82 +1,96 @@
-# CatatRasa - Aplikasi Manajemen Resep & HPP
+# CatatRasa - Aplikasi Manajemen Resep & HPP untuk Usaha Kuliner
 
 ![Cover CatatRasa](assets/og-cover-catatanrasa.jpg)
 
-**CatatRasa** adalah aplikasi web yang dirancang untuk membantu para pelaku usaha kuliner rumahan, katering, atau siapa saja yang hobi memasak, untuk mengelola resep, menghitung Harga Pokok Penjualan (HPP) secara akurat, dan mengatur pesanan dengan lebih efisien.
+**CatatRasa** adalah aplikasi web komprehensif yang dirancang khusus untuk para pelaku usaha kuliner (rumahan, katering, UMKM) dan hobiis masak yang serius. Aplikasi ini berfungsi sebagai asisten dapur digital, membantu Anda mencatat resep secara detail, menghitung Harga Pokok Penjualan (HPP) secara akurat, hingga mengelola pesanan dengan efisien.
 
-Aplikasi ini dibangun menggunakan **PHP** asli (native) dengan database **MySQL**, dan antarmuka pengguna yang modern menggunakan **Tailwind CSS**.
+Dibangun dengan **PHP Native** dan **MySQL**, aplikasi ini mengutamakan kemudahan penggunaan, kecepatan, dan keamanan data tanpa bergantung pada *framework* yang berat.
 
----
-
-## ✨ Fitur Utama
-
-Aplikasi ini dilengkapi dengan berbagai fitur untuk menyederhanakan manajemen dapur Anda:
-
-* **Manajemen Resep Digital**:
-    * Buat, edit, dan simpan resep tanpa batas.
-    * Lengkapi resep dengan langkah-langkah detail, deskripsi, porsi default, kategori, hingga link video YouTube.
-    * Unggah foto hasil masakan untuk setiap resep.
-
-* **Manajemen Bahan Baku**:
-    * Catat semua bahan dasar yang Anda miliki.
-    * Simpan informasi harga beli dan satuan untuk setiap bahan.
-    * Fitur pencarian bahan yang cepat saat membuat resep baru.
-
-* **Kalkulator HPP Otomatis**:
-    * **Harga Pokok Penjualan (HPP)** dihitung secara *real-time* berdasarkan harga bahan baku terkini.
-    * Sesuaikan **Biaya Overhead** (listrik, gas, dll.) dalam persentase (%) melalui halaman pengaturan untuk perhitungan HPP yang lebih akurat.
-    * Kalkulator harga jual interaktif untuk menentukan margin keuntungan dalam Persen (%) atau Rupiah (Rp).
-
-* **Manajemen Pesanan & Pelanggan**:
-    * Catat pesanan yang masuk dengan detail pelanggan, tanggal pengiriman, dan item yang dipesan.
-    * Kelola status pesanan (Baru, Diproses, Selesai, Dibatalkan).
-    * Secara otomatis menghitung total penjualan, modal, dan keuntungan untuk setiap pesanan.
-
-* **Fitur Pendukung Bisnis**:
-    * **Kalkulator Snack Box**: Buat paket snack box dengan mudah dan hitung HPP totalnya secara otomatis.
-    * **Daftar Belanja Interaktif**: Tambahkan bahan dari resep ke daftar belanja secara otomatis, atau tambahkan item secara manual.
-    * **Ringkasan Bisnis**: Lihat ringkasan pendapatan, keuntungan, dan jumlah pesanan di halaman Dashboard.
+[🔗 **Lihat Demo Langsung**](#) *(Ganti `(#)` dengan link demo Anda jika ada)*
 
 ---
 
-## 🛠️ Teknologi yang Digunakan
+## ✨ Filosofi & Fitur Unggulan
+
+Tujuan utama CatatRasa adalah memberikan kontrol penuh atas aspek finansial dan operasional dapur Anda.
+
+#### 📈 **Fokus pada Profitabilitas**
+* **Kalkulator HPP Real-time**: Secara otomatis menghitung modal (HPP) untuk setiap resep berdasarkan harga bahan baku terkini. Anda tidak akan pernah salah menentukan harga jual lagi.
+* **Alokasi Biaya Overhead**: Masukkan biaya tak terduga (listrik, gas, air, dll.) dalam bentuk persentase (%) untuk mendapatkan perhitungan HPP yang sesungguhnya.
+* **Analisis Keuntungan**: Tentukan margin keuntungan dalam **Persen (%)** atau **Rupiah (Rp)**. Lihat langsung berapa keuntungan per porsi dan total keuntungan dari sebuah resep.
+
+#### 🗂️ **Manajemen yang Terorganisir**
+* **Database Resep & Bahan**: Simpan semua resep dan bahan baku Anda di satu tempat yang aman dan mudah diakses.
+* **Manajemen Pesanan**: Catat pesanan dari pelanggan, kelola statusnya (Baru, Diproses, Selesai, Dibatalkan), dan lihat riwayat pesanan dengan mudah.
+* **Kalkulator Snack Box**: Rancang paket menu (seperti snack box atau hampers) dan hitung total modalnya secara otomatis.
+* **Daftar Belanja Cerdas**: Bahan-bahan dari resep yang akan dibuat bisa langsung ditambahkan ke daftar belanja, membantu Anda menyetok ulang bahan dengan efisien.
+
+#### 🔐 **Keamanan Data**
+* **Multi-User & Terisolasi**: Setiap pengguna memiliki data resep, bahan, dan pesanannya sendiri yang tidak bisa diakses oleh pengguna lain.
+* **Praktik Keamanan Modern**: Dibangun dengan *Prepared Statements* untuk mencegah SQL Injection dan sanitasi output untuk mencegah XSS. Folder-folder sensitif juga dilindungi.
+
+---
+
+## 🛠️ Tumpukan Teknologi (Tech Stack)
 
 * **Backend**: PHP 8+ (Native, Prosedural & OOP)
 * **Database**: MySQL / MariaDB
-* **Frontend**: HTML, Tailwind CSS, JavaScript (Vanilla JS)
-* **Fitur Tambahan**:
-    * AJAX (Fetch API) untuk interaksi dinamis tanpa *reload* halaman.
-    * GD Library untuk *image resizing* saat proses unggah.
+* **Frontend**:
+    * HTML5
+    * Tailwind CSS (via CDN) untuk desain yang responsif dan modern.
+    * JavaScript (Vanilla JS) untuk interaktivitas dinamis.
+* **Server-Side**:
+    * AJAX (Fetch API) untuk komunikasi *asynchronous* (misalnya, pencarian bahan tanpa *reload*).
+    * GD Library (PHP Extension) untuk memproses dan mengubah ukuran gambar resep saat diunggah.
 
 ---
 
-## 🚀 Instalasi & Konfigurasi
+## 🚀 Panduan Instalasi (Lokal)
 
-Untuk menjalankan aplikasi ini di lingkungan lokal (misalnya menggunakan XAMPP):
+Untuk menjalankan aplikasi ini di komputer Anda menggunakan XAMPP:
 
-1.  **Clone Repositori**:
+1.  **Clone Repositori**
     ```bash
-    git clone [https://github.com/nama-anda/nama-repositori.git](https://github.com/nama-anda/nama-repositori.git)
+    git clone [https://github.com/nama-anda/catatrasa.git](https://github.com/nama-anda/catatrasa.git)
+    cd catatrasa
     ```
 
-2.  **Database**:
-    * Buat sebuah database baru di phpMyAdmin.
-    * Impor file `database.sql` (jika tersedia) atau buat tabel secara manual sesuai struktur yang dibutuhkan.
+2.  **Setup Database**
+    * Buka phpMyAdmin (`http://localhost/phpmyadmin`).
+    * Buat database baru, misalnya dengan nama `catatrasa_db`.
+    * Impor file `database.sql` (jika Anda menyediakannya) ke dalam database yang baru dibuat.
 
-3.  **Konfigurasi Koneksi**:
+3.  **Konfigurasi Koneksi**
     * Buka file `config/config.php`.
-    * Sesuaikan variabel `$db_host`, `$db_user`, `$db_pass`, dan `$db_name` dengan konfigurasi database Anda.
-
+    * Sesuaikan detail koneksi database Anda:
     ```php
     $db_host = 'localhost';
     $db_user = 'root';
-    $db_pass = '';
+    $db_pass = ''; // Biasanya kosong di XAMPP
     $db_name = 'catatrasa_db';
     ```
 
-4.  **Jalankan Aplikasi**:
-    * Letakkan folder proyek di dalam direktori `htdocs` XAMPP Anda.
-    * Buka browser dan akses `http://localhost/nama-folder-proyek/`.
+4.  **Jalankan Aplikasi**
+    * Pindahkan folder proyek `catatrasa` ke dalam direktori `htdocs` di dalam folder instalasi XAMPP Anda.
+    * Buka browser dan akses alamat `http://localhost/catatrasa/`.
+
+---
+
+## 📂 Struktur Folder Proyek
+
+Berikut adalah penjelasan singkat mengenai struktur direktori utama aplikasi:
+
+```
+/
+├── ajax/             # Berisi semua file PHP untuk menangani permintaan AJAX.
+├── config/           # File konfigurasi koneksi database.
+├── includes/         # Komponen PHP yang digunakan berulang (header, footer, navigasi).
+├── uploads/          # Tempat menyimpan gambar resep yang diunggah pengguna.
+├── assets/           # Menyimpan aset statis seperti gambar, ikon, dan CSS/JS kustom.
+├── index.php         # Halaman utama atau halaman login.
+├── dashboard.php     # Halaman utama setelah pengguna login.
+└── ...               # File-file halaman utama lainnya.
+```
 
 ---
 
@@ -86,8 +100,26 @@ Untuk menjalankan aplikasi ini di lingkungan lokal (misalnya menggunakan XAMPP):
 | :---: | :---: |
 | _\[Screenshot Dashboard Anda]_ | _\[Screenshot Halaman Detail Resep Anda]_ |
 
-| Manajemen Bahan | Form Resep |
+| Manajemen Bahan | Form Resep dengan Pencarian Bahan |
 | :---: | :---: |
 | _\[Screenshot Manajemen Bahan]_ | _\[Screenshot Form Resep]_ |
 
-**Tips**: Ganti `_[Screenshot ... Anda]_` dengan gambar nyata dari aplikasi Anda untuk membuatnya lebih menarik. Anda bisa mengambil screenshot, menambahkannya ke dalam repositori (misalnya di folder `assets/screenshots/`), lalu menampilkannya menggunakan sintaks Markdown: `![Deskripsi Gambar](assets/screenshots/dashboard.png)`
+*(**Tips**: Ganti placeholder di atas dengan gambar nyata dari aplikasi Anda untuk membuatnya lebih menarik!)*
+
+---
+
+## 🤝 Berkontribusi
+
+Kontribusi untuk pengembangan CatatRasa sangat diterima! Jika Anda menemukan bug atau memiliki ide untuk fitur baru, silakan buka **Issue**. Jika Anda ingin berkontribusi langsung pada kode, silakan buat **Pull Request**.
+
+1.  Fork repositori ini.
+2.  Buat branch fitur baru (`git checkout -b fitur/fitur-keren-baru`).
+3.  Commit perubahan Anda (`git commit -m 'Menambahkan fitur keren baru'`).
+4.  Push ke branch tersebut (`git push origin fitur/fitur-keren-baru`).
+5.  Buka Pull Request.
+
+---
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan di bawah Lisensi MIT. Lihat file `LICENSE` untuk detail lebih lanjut.

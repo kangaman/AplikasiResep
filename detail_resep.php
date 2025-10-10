@@ -1,11 +1,11 @@
-<?php 
+<?php
 // Menggunakan header global yang baru. Ini akan menangani session, koneksi DB, dan tema.
-include __DIR__ . '/includes/header.php'; 
+include __DIR__ . '/includes/header.php';
 
 // Cek login setelah header di-include
-if (!isset($_SESSION['user_id'])) { 
-    header("Location: index.php"); 
-    exit(); 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: index.php");
+    exit();
 }
 // user_id sudah ada dari header.php
 $resep_id = $_GET['id'] ?? null;
@@ -15,13 +15,19 @@ if (!$resep_id) {
     exit();
 }
 
-// Ambil margin default dari pengaturan
-$stmt_settings = $conn->prepare("SELECT default_margin FROM user_settings WHERE user_id = ?");
+// ========================================================================
+// ## PERUBAHAN 1: AMBIL NILAI OVERHEAD DARI DATABASE ##
+// ========================================================================
+// Ambil pengaturan pengguna, termasuk margin dan overhead
+$stmt_settings = $conn->prepare("SELECT default_margin, default_overhead FROM user_settings WHERE user_id = ?");
 $stmt_settings->bind_param("i", $user_id);
 $stmt_settings->execute();
 $settings_result = $stmt_settings->get_result();
-$default_margin = ($settings_result->num_rows > 0) ? $settings_result->fetch_assoc()['default_margin'] : 100;
+$settings = $settings_result->fetch_assoc();
+$default_margin = $settings['default_margin'] ?? 100;
+$default_overhead = $settings['default_overhead'] ?? 5; // Ambil nilai overhead
 $stmt_settings->close();
+// ========================================================================
 
 // Logika untuk menambahkan bahan ke daftar belanja
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tambah_ke_belanjaan'])) {
@@ -94,14 +100,19 @@ while ($row = $res_ing->fetch_assoc()) {
 }
 $ing_stmt->close();
 
-// Ambil semua data harga dasar dari database
+// Ambil semua data harga dasar dari database (sudah aman dengan prepared statement)
 $base_ingredients_data = [];
-$res_base = $conn->query("SELECT nama_bahan as nama, jumlah_beli as jumlah, satuan_beli as satuan, harga_beli as harga FROM base_ingredients WHERE user_id = $user_id");
+$stmt_base = $conn->prepare("SELECT nama_bahan as nama, jumlah_beli as jumlah, satuan_beli as satuan, harga_beli as harga FROM base_ingredients WHERE user_id = ?");
+$stmt_base->bind_param("i", $user_id);
+$stmt_base->execute();
+$res_base = $stmt_base->get_result();
 if ($res_base) {
     while ($row = $res_base->fetch_assoc()) {
         $base_ingredients_data[] = $row;
     }
 }
+$stmt_base->close();
+
 
 // Fungsi untuk mendapatkan link embed YouTube
 function get_youtube_embed_url($url) {
@@ -134,7 +145,7 @@ function get_youtube_embed_url($url) {
 <body class="bg-background-light dark:bg-background-dark font-display">
 <div class="relative flex min-h-screen w-full flex-col justify-between overflow-x-hidden pb-20">
     <div>
-<?php include __DIR__ . '/includes/navigation.php'; ?>
+        <?php include __DIR__ . '/includes/navigation.php'; ?>
 
         <main class="max-w-4xl mx-auto p-6">
             <h1 class="text-content-light dark:text-content-dark text-4xl font-bold leading-tight tracking-tight mb-2"><?php echo htmlspecialchars($resep['nama_kue']); ?></h1>
@@ -161,21 +172,23 @@ function get_youtube_embed_url($url) {
 
             <section class="mb-8 p-4 rounded-lg bg-primary/10 dark:bg-primary/20 flex flex-wrap items-center justify-between">
                  <div class="w-full md:w-auto mb-4 md:mb-0">
-                    <label for="portion-input" class="font-bold text-primary text-lg">Hitung Ulang Porsi</label>
+                     <label for="portion-input" class="font-bold text-primary text-lg">Hitung Ulang Porsi</label>
                  </div>
                  <div class="flex items-center gap-4">
-                     <input type="number" id="portion-input" value="<?php echo htmlspecialchars($resep['porsi_default']); ?>" min="1" class="w-20 text-center bg-transparent font-bold text-lg border-b-2 border-primary/50 focus:border-primary focus:ring-0">
-                     <span class="text-subtle-light dark:text-subtle-dark font-medium">Porsi</span>
+                      <input type="number" id="portion-input" value="<?php echo htmlspecialchars($resep['porsi_default']); ?>" min="1" class="w-20 text-center bg-transparent font-bold text-lg border-b-2 border-primary/50 focus:border-primary focus:ring-0">
+                      <span class="text-subtle-light dark:text-subtle-dark font-medium">Porsi</span>
                  </div>
                  <div id="total-cost-container" class="w-full md:w-auto text-right mt-4 md:mt-0">
-                    <p class="text-sm text-subtle-light dark:text-subtle-dark">Total Biaya Modal</p>
-                    <span class="text-xl font-bold text-content-light dark:text-content-dark">Rp 0</span>
+                     <p class="text-sm text-subtle-light dark:text-subtle-dark">Total Biaya Bahan</p>
+                     <span class="text-lg font-bold text-content-light dark:text-content-dark" id="total-bahan-cost">Rp 0</span>
+                     <p class="text-xs text-subtle-light dark:text-subtle-dark mt-1">Overhead (<span id="overhead-percent-display">0</span>%)</p>
+                     <span class="text-sm font-medium text-content-light dark:text-content-dark" id="total-overhead-cost">Rp 0</span>
                  </div>
             </section>
             
             <section class="mb-8 p-4 rounded-lg bg-gray-200 dark:bg-gray-800">
                 <h3 class="font-bold text-lg mb-4 text-content-light dark:text-content-dark">Kalkulator Harga Jual</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-end">
                     <div>
                         <label for="margin-input" class="text-sm font-medium text-subtle-light dark:text-subtle-dark">Margin Keuntungan</label>
                         <div class="flex items-center mt-1">
@@ -186,7 +199,7 @@ function get_youtube_embed_url($url) {
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-right">
+                    <div class="grid grid-cols-2 gap-4 text-right">
                         <div>
                             <p class="text-xs text-subtle-light dark:text-subtle-dark">Modal / Porsi</p>
                             <span id="harga-modal-porsi" class="text-base font-bold text-content-light dark:text-content-dark">Rp 0</span>
@@ -265,11 +278,15 @@ function get_youtube_embed_url($url) {
         </main>
     </div>
 </div>
+<?php include __DIR__ . '/includes/footer.php'; ?>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const portionInput = document.getElementById('portion-input');
     const ingredientList = document.getElementById('ingredient-list-ul');
-    const totalCostContainer = document.getElementById('total-cost-container').querySelector('span');
+    const totalBahanCostEl = document.getElementById('total-bahan-cost');
+    const totalOverheadCostEl = document.getElementById('total-overhead-cost');
+    const overheadPercentDisplayEl = document.getElementById('overhead-percent-display');
     const marginInput = document.getElementById('margin-input');
     const marginTypePercentBtn = document.getElementById('margin-type-percent');
     const marginTypeRpBtn = document.getElementById('margin-type-rp');
@@ -280,8 +297,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const baseIngredientsData = <?php echo json_encode($base_ingredients_data); ?>;
     const basePortion = <?php echo (float)($resep['porsi_default'] > 0 ? $resep['porsi_default'] : 1); ?>;
-    let totalModal = 0;
+    const overheadPercentage = <?php echo (float)$default_overhead; ?>;
+    let totalBahanModal = 0;
+    let totalModalHPP = 0;
     let marginType = '%'; 
+
+    overheadPercentDisplayEl.textContent = overheadPercentage;
 
     function formatRupiah(angka) {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.ceil(angka));
@@ -289,19 +310,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function calculateSellingPrice() {
         const porsi = parseFloat(portionInput.value) || 1;
-        const marginValue = parseFloat(marginInput.value) || 0;
+        if (porsi <= 0) return;
 
-        if (porsi <= 0) {
-            hargaModalPorsiEl.textContent = formatRupiah(0);
-            keuntunganPorsiEl.textContent = formatRupiah(0);
-            hargaJualPorsiEl.textContent = formatRupiah(0);
-            totalKeuntunganEl.textContent = formatRupiah(0);
-            return;
-        }
-
-        const modalPerPorsi = totalModal / porsi;
+        // Gunakan totalModalHPP yang sudah termasuk overhead
+        const modalPerPorsi = totalModalHPP / porsi;
         let hargaJual = 0;
         let keuntunganPerPorsi = 0;
+        const marginValue = parseFloat(marginInput.value) || 0;
 
         if (marginType === '%') {
             keuntunganPerPorsi = modalPerPorsi * (marginValue / 100);
@@ -321,14 +336,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const targetPortion = parseFloat(portionInput.value) || basePortion;
         document.getElementById('porsi-dihitung-hidden').value = targetPortion;
         
-        let currentTotalModal = 0;
-        ingredientList.querySelectorAll('[data-base-qty]').forEach(item => {
+        let currentTotalBahan = 0;
+        ingredientList.querySelectorAll('[data-nama-bahan]').forEach(item => {
             const baseQty = parseFloat(item.dataset.baseQty);
             const namaBahan = item.dataset.namaBahan.toLowerCase();
             const newQty = (baseQty / basePortion) * targetPortion;
             
-            const qtyElement = item.querySelector('.ingredient-qty');
-            if(qtyElement) qtyElement.textContent = newQty.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            item.querySelector('.ingredient-qty').textContent = newQty.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
             const bahanDasar = baseIngredientsData.find(b => b.nama.toLowerCase() === namaBahan);
             const costElement = item.querySelector('.ingredient-cost');
@@ -336,16 +350,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (bahanDasar && bahanDasar.harga > 0 && bahanDasar.jumlah > 0) {
                 const hargaPerSatuan = bahanDasar.harga / bahanDasar.jumlah;
                 const biayaItem = newQty * hargaPerSatuan;
-                currentTotalModal += biayaItem;
+                currentTotalBahan += biayaItem;
                 if(costElement) costElement.textContent = `(${formatRupiah(biayaItem)})`;
             } else {
                 if(costElement) costElement.textContent = '';
             }
         });
         
-        totalModal = currentTotalModal;
-        if(totalCostContainer) totalCostContainer.textContent = formatRupiah(totalModal);
+        // --- INI LOGIKA PENTINGNYA ---
+        totalBahanModal = currentTotalBahan;
+        const overheadCost = totalBahanModal * (overheadPercentage / 100);
+        totalModalHPP = totalBahanModal + overheadCost; // HPP dihitung di sini
         
+        // Update tampilan
+        totalBahanCostEl.textContent = formatRupiah(totalBahanModal);
+        totalOverheadCostEl.textContent = formatRupiah(overheadCost);
+        
+        // Panggil kalkulasi harga jual setelah HPP dihitung
         calculateSellingPrice();
     }
     
@@ -371,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
     marginTypePercentBtn.addEventListener('click', () => toggleMarginType('%'));
     marginTypeRpBtn.addEventListener('click', () => toggleMarginType('Rp'));
 
+    // Panggil kalkulasi awal saat halaman dimuat
     calculateCost();
 });
 </script>

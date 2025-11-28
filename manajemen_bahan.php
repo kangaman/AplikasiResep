@@ -1,22 +1,30 @@
 <?php
-include __DIR__ . '/includes/header.php';
-if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
+// 1. Mulai sesi & Config DULUAN sebelum ada HTML apapun
+session_start();
+include __DIR__ . '/config/config.php';
 
+// 2. Cek Login
+if (!isset($_SESSION['user_id'])) { 
+    header("Location: index.php"); 
+    exit(); 
+}
+
+$user_id = $_SESSION['user_id'];
 $pesan = '';
 $bahan_edit = null;
 
-// Definisikan daftar kategori yang akan digunakan di seluruh halaman
+// Definisikan daftar kategori & satuan
 $kategori_list = [
     'Bahan Kering', 'Bahan Basah', 'Lemak & Produk Susu', 
     'Pelengkap & Isian', 'Bahan Olahan', 'Non-Pangan & Kemasan', 'Lain-lain'
 ];
-
-// Definisikan daftar satuan yang umum digunakan
 $satuan_list = [
     'gram', 'kg', 'ml', 'liter', 'buah', 'pack', 'sachet', 'sdm', 'sdt'
 ];
 
-// Logika Simpan / Update dengan pencatatan histori
+// --- LOGIKA PHP DIPINDAHKAN KE SINI (PALING ATAS) ---
+
+// Logika Simpan / Update
 if (isset($_POST['simpan'])) {
     $id = $_POST['id'];
     $nama = trim($_POST['nama_bahan']);
@@ -41,16 +49,15 @@ if (isset($_POST['simpan'])) {
                 $stmt_history->execute();
                 $stmt_history->close();
             }
-            $pesan = "Bahan baru berhasil ditambahkan!";
+            $pesan_teks = "Bahan baru berhasil ditambahkan!";
         } else { // UPDATE LAMA
-            // Ambil harga lama sebelum diupdate
+            // Ambil harga lama
             $stmt_old = $conn->prepare("SELECT harga_beli FROM base_ingredients WHERE id = ? AND user_id = ?");
             $stmt_old->bind_param("ii", $id, $user_id);
             $stmt_old->execute();
             $result_old = $stmt_old->get_result();
             if($result_old->num_rows > 0) {
                 $old_price = (int)$result_old->fetch_assoc()['harga_beli'];
-                // Jika harga berubah, simpan ke histori
                 if ($old_price !== $harga) {
                     $stmt_history = $conn->prepare("INSERT INTO base_ingredients_history (ingredient_id, user_id, harga_beli) VALUES (?, ?, ?)");
                     $stmt_history->bind_param("iii", $id, $user_id, $harga);
@@ -60,14 +67,15 @@ if (isset($_POST['simpan'])) {
             }
             $stmt_old->close();
 
-            // Update bahan utama
             $stmt = $conn->prepare("UPDATE base_ingredients SET nama_bahan=?, kategori=?, jumlah_beli=?, satuan_beli=?, harga_beli=? WHERE id=? AND user_id=?");
             $stmt->bind_param("ssdsiii", $nama, $kategori, $jumlah, $satuan, $harga, $id, $user_id);
             $stmt->execute();
-            $pesan = "Data bahan berhasil diperbarui!";
+            $pesan_teks = "Data bahan berhasil diperbarui!";
         }
         $stmt->close();
-        header("Location: manajemen_bahan.php?pesan=" . urlencode($pesan));
+        
+        // REDIRECT AMAN DI SINI KARENA BELUM ADA HTML
+        header("Location: manajemen_bahan.php?pesan=" . urlencode($pesan_teks));
         exit();
     }
 }
@@ -93,7 +101,7 @@ if (isset($_GET['edit'])) {
     $stmt->close();
 }
 
-// Ambil semua bahan dan kelompokkan berdasarkan kategori
+// Ambil Data untuk Tampilan
 $semua_bahan_grouped = [];
 $result = $conn->query("SELECT * FROM base_ingredients WHERE user_id = $user_id ORDER BY kategori, nama_bahan ASC");
 while ($row = $result->fetch_assoc()) {
@@ -107,7 +115,27 @@ while ($row = $result->fetch_assoc()) {
 if (isset($_GET['pesan'])) {
     $pesan = "<div id='pesan-notifikasi' class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 max-w-lg mx-auto' role='alert'>" . htmlspecialchars($_GET['pesan']) . "</div>";
 }
+
+// --- BARU DI SINI HTML DIMULAI (Include Header) ---
+// Kita set variabel theme manual karena include header.php akan kita bypass sedikit bagian atasnya
+// Atau kita include header.php TETAPI kita tahu session_start di dalamnya akan di-ignore (aman)
+// Namun agar style.css termuat, kita tetap butuh HTML headernya.
 ?>
+
+<?php
+$theme = 'light';
+$stmt_theme = $conn->prepare("SELECT theme FROM user_settings WHERE user_id = ?");
+$stmt_theme->bind_param("i", $user_id);
+$stmt_theme->execute();
+if ($row_theme = $stmt_theme->get_result()->fetch_assoc()) {
+    $theme = $row_theme['theme'];
+}
+$stmt_theme->close();
+?>
+<!DOCTYPE html>
+<html lang="id" class="<?php if($theme === 'dark') echo 'dark'; ?>">
+<?php include __DIR__ . '/includes/header.php'; ?> 
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

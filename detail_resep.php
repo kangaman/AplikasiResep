@@ -1,39 +1,45 @@
 <?php
-// Menggunakan header global yang baru. Ini akan menangani session, koneksi DB, dan tema.
-include __DIR__ . '/includes/header.php';
+// ========================================================================
+// 1. INISIALISASI & LOGIKA (SEBELUM HTML)
+// ========================================================================
 
-// Cek login setelah header di-include
+// Mulai sesi dengan pengecekan aman
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+include __DIR__ . '/config/config.php';
+
+// Cek Login
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
-// user_id sudah ada dari header.php
-$resep_id = $_GET['id'] ?? null;
+$user_id = $_SESSION['user_id'];
 
+// Validasi ID Resep
+$resep_id = $_GET['id'] ?? null;
 if (!$resep_id) {
     header("Location: dashboard.php");
     exit();
 }
 
-// ========================================================================
-// ## PERUBAHAN 1: AMBIL NILAI OVERHEAD DARI DATABASE ##
-// ========================================================================
-// Ambil pengaturan pengguna, termasuk margin dan overhead
+// Ambil Pengaturan (Overhead & Margin) untuk Kalkulator JS nanti
 $stmt_settings = $conn->prepare("SELECT default_margin, default_overhead FROM user_settings WHERE user_id = ?");
 $stmt_settings->bind_param("i", $user_id);
 $stmt_settings->execute();
 $settings_result = $stmt_settings->get_result();
 $settings = $settings_result->fetch_assoc();
 $default_margin = $settings['default_margin'] ?? 100;
-$default_overhead = $settings['default_overhead'] ?? 5; // Ambil nilai overhead
+$default_overhead = $settings['default_overhead'] ?? 5; 
 $stmt_settings->close();
-// ========================================================================
 
-// Logika untuk menambahkan bahan ke daftar belanja
+// ------------------------------------------------------------------------
+// LOGIKA POST: TAMBAH KE DAFTAR BELANJA
+// ------------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tambah_ke_belanjaan'])) {
     $porsi_dihitung = (int) $_POST['porsi_dihitung'];
     
-    // Ambil porsi default dari database lagi untuk memastikan data akurat
+    // Ambil porsi default resep
     $resep_temp_stmt = $conn->prepare("SELECT porsi_default FROM resep WHERE id = ?");
     $resep_temp_stmt->bind_param("i", $resep_id);
     $resep_temp_stmt->execute();
@@ -42,42 +48,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tambah_ke_belanjaan']
     $resep_temp_stmt->close();
 
     if ($porsi_default > 0) {
+        // Ambil semua bahan
         $ing_stmt = $conn->prepare("SELECT * FROM ingredients WHERE resep_id = ?");
         $ing_stmt->bind_param("i", $resep_id);
         $ing_stmt->execute();
         $result_ing = $ing_stmt->get_result();
+        
+        // [OPTIMASI] Siapkan statement di luar loop agar lebih cepat
+        $cek_stmt = $conn->prepare("SELECT id, jumlah FROM shopping_list WHERE user_id = ? AND nama_bahan = ? AND satuan = ?");
+        $update_stmt = $conn->prepare("UPDATE shopping_list SET jumlah = ? WHERE id = ?");
+        $insert_stmt = $conn->prepare("INSERT INTO shopping_list (user_id, nama_bahan, jumlah, satuan) VALUES (?, ?, ?, ?)");
+
         while ($ing = $result_ing->fetch_assoc()) {
+            // Hitung kebutuhan bahan sesuai porsi target
             $jumlah_baru = ($ing['jumlah'] / $porsi_default) * $porsi_dihitung;
             
-            $cek_stmt = $conn->prepare("SELECT id, jumlah FROM shopping_list WHERE user_id = ? AND nama_bahan = ? AND satuan = ?");
+            // Cek apakah item sudah ada di daftar belanja
             $cek_stmt->bind_param("iss", $user_id, $ing['nama_bahan'], $ing['satuan']);
             $cek_stmt->execute();
             $item_ada = $cek_stmt->get_result()->fetch_assoc();
-            $cek_stmt->close();
 
             if ($item_ada) {
+                // Update jumlah
                 $jumlah_total = $item_ada['jumlah'] + $jumlah_baru;
-                $update_stmt = $conn->prepare("UPDATE shopping_list SET jumlah = ? WHERE id = ?");
                 $update_stmt->bind_param("di", $jumlah_total, $item_ada['id']);
                 $update_stmt->execute();
-                $update_stmt->close();
             } else {
-                $insert_stmt = $conn->prepare("INSERT INTO shopping_list (user_id, nama_bahan, jumlah, satuan) VALUES (?, ?, ?, ?)");
+                // Insert baru
                 $insert_stmt->bind_param("isds", $user_id, $ing['nama_bahan'], $jumlah_baru, $ing['satuan']);
                 $insert_stmt->execute();
-                $insert_stmt->close();
             }
         }
+        
+        // Tutup semua statement
         $ing_stmt->close();
+        $cek_stmt->close();
+        $update_stmt->close();
+        $insert_stmt->close();
+
         $_SESSION['pesan_sukses'] = "Bahan berhasil ditambahkan ke daftar belanja!";
     } else {
         $_SESSION['pesan_error'] = "Porsi default resep adalah 0, tidak dapat menghitung bahan.";
     }
+    
+    // Redirect aman karena belum ada HTML
     header("Location: detail_resep.php?id=" . $resep_id);
     exit();
 }
 
-// Ambil data resep utama
+// ------------------------------------------------------------------------
+// AMBIL DATA UNTUK TAMPILAN
+// ------------------------------------------------------------------------
+
+// 1. Ambil Data Resep Utama
 $stmt = $conn->prepare("SELECT * FROM resep WHERE id = ? AND user_id = ?");
 $stmt->bind_param("ii", $resep_id, $user_id);
 $stmt->execute();
@@ -89,7 +112,7 @@ if ($result->num_rows == 0) {
 $resep = $result->fetch_assoc();
 $stmt->close();
 
-// Ambil bahan-bahan resep
+// 2. Ambil Bahan-bahan Resep
 $ingredients = [];
 $ing_stmt = $conn->prepare("SELECT * FROM ingredients WHERE resep_id = ?");
 $ing_stmt->bind_param("i", $resep_id);
@@ -100,7 +123,7 @@ while ($row = $res_ing->fetch_assoc()) {
 }
 $ing_stmt->close();
 
-// Ambil semua data harga dasar dari database (sudah aman dengan prepared statement)
+// 3. Ambil Harga Bahan Dasar (untuk kalkulasi real-time)
 $base_ingredients_data = [];
 $stmt_base = $conn->prepare("SELECT nama_bahan as nama, jumlah_beli as jumlah, satuan_beli as satuan, harga_beli as harga FROM base_ingredients WHERE user_id = ?");
 $stmt_base->bind_param("i", $user_id);
@@ -113,8 +136,7 @@ if ($res_base) {
 }
 $stmt_base->close();
 
-
-// Fungsi untuk mendapatkan link embed YouTube
+// Helper Function: YouTube Embed
 function get_youtube_embed_url($url) {
     $regex = '/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/';
     if (preg_match($regex, $url, $matches)) {
@@ -122,7 +144,13 @@ function get_youtube_embed_url($url) {
     }
     return '';
 }
+
+// ========================================================================
+// 2. TAMPILAN HTML (MULAI DARI SINI)
+// ========================================================================
+include __DIR__ . '/includes/header.php'; // Header sekarang aman di-include
 ?>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

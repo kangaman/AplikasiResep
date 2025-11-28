@@ -1,15 +1,19 @@
 <?php
-// Menggunakan header global, yang sudah berisi session_start() dan config.php
-include __DIR__ . '/includes/header.php';
+// 1. Inisialisasi & Cek Login (SEBELUM HTML)
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+include __DIR__ . '/config/config.php';
 
+// Cek Login DULUAN
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
-// Variabel $user_id sudah ada dari header.php
+$user_id = $_SESSION['user_id'];
 
+// Ambil pesan notifikasi (jika ada)
 $pesan = '';
-// Menampilkan notifikasi setelah aksi
 if (isset($_GET['status'])) {
     if ($_GET['status'] == 'sukses_hapus') {
         $pesan = "<div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4' role='alert'>Pesanan berhasil dihapus.</div>";
@@ -17,10 +21,12 @@ if (isset($_GET['status'])) {
     if ($_GET['status'] == 'sukses_duplikat') {
         $pesan = "<div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4' role='alert'>Pesanan berhasil diduplikasi! Anda dialihkan ke form edit.</div>";
     }
+    if ($_GET['status'] == 'gagal_hapus') {
+        $pesan = "<div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4' role='alert'>Gagal menghapus pesanan.</div>";
+    }
 }
 
-
-// Ambil semua data pesanan untuk pengguna ini
+// Ambil semua data pesanan
 $orders = [];
 $stmt = $conn->prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY tanggal_pengiriman DESC");
 $stmt->bind_param("i", $user_id);
@@ -30,6 +36,9 @@ if ($result) {
     $orders = $result->fetch_all(MYSQLI_ASSOC);
 }
 $stmt->close();
+
+// 2. BARU TAMPILKAN HEADER (HTML)
+include __DIR__ . '/includes/header.php';
 ?>
 <head>
     <meta charset="UTF-8">

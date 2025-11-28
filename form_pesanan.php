@@ -191,12 +191,13 @@ if (isset($_GET['edit_id'])) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Definisi semua variabel DOM
+    // Definisi Variabel DOM
     const customerNameInput = document.getElementById('nama_pelanggan');
     const customerIdInput = document.getElementById('customer_id');
     const customerContactInput = document.getElementById('kontak_pelanggan');
     const customerAddressInput = document.getElementById('alamat_pengiriman');
     const customerSuggestionsBox = document.getElementById('customer-suggestions');
+    
     const searchInput = document.getElementById('search-item');
     const suggestionsBox = document.getElementById('suggestions-box');
     const itemsContainer = document.getElementById('order-items-container');
@@ -207,27 +208,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
-    function updateGrandTotal() {
-        let total = 0;
-        itemsContainer.querySelectorAll('.item-row').forEach(row => {
-            total += parseFloat(row.dataset.subtotal) || 0;
-        });
-        grandTotalEl.textContent = formatRupiah(total);
-        checkEmpty();
-    }
-    
-    function checkEmpty(){
-        const rowCount = itemsContainer.querySelectorAll('.item-row').length;
-        emptyMsg.style.display = rowCount > 0 ? 'none' : 'block';
-    }
-
-    // Fungsi-fungsi lain (addRowEventListeners, addItemToTable, addExpenseRow, dll) tetap sama...
-
-    // ## INI BAGIAN UTAMA YANG DIPERBAIKI ##
-    // Logika Pencarian Pelanggan
+    // --- 1. Logika Pencarian Pelanggan ---
     customerNameInput.addEventListener('keyup', async function() {
         const query = this.value.trim();
-        customerIdInput.value = ''; // Reset ID setiap kali mengetik
+        customerIdInput.value = ''; // Reset ID jika user mengetik ulang
         if (query.length < 2) {
             customerSuggestionsBox.classList.add('hidden');
             return;
@@ -237,8 +221,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const customers = await response.json();
             if (customers.length > 0) {
                 customerSuggestionsBox.innerHTML = customers.map(cust => 
-                    `<div class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer customer-suggestion-item" data-customer='${JSON.stringify(cust)}'>
-                        <p class="font-semibold">${cust.nama_pelanggan}</p>
+                    `<div class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer customer-suggestion-item border-b border-gray-100 dark:border-gray-600" data-customer='${JSON.stringify(cust)}'>
+                        <p class="font-semibold text-sm">${cust.nama_pelanggan}</p>
+                        <p class="text-xs text-gray-500">${cust.kontak || '-'} | ${cust.alamat || '-'}</p>
                     </div>`
                 ).join('');
                 customerSuggestionsBox.classList.remove('hidden');
@@ -248,7 +233,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error('Error fetching customers:', error); }
     });
 
-    // Logika Klik pada Saran Pelanggan (Event Delegation)
     customerSuggestionsBox.addEventListener('click', function(e) {
         const itemDiv = e.target.closest('.customer-suggestion-item');
         if (itemDiv) {
@@ -261,8 +245,169 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ... sisa kode JavaScript lainnya (pencarian item, event listener lain) tetap sama ...
-    
+    // --- 2. Logika Pencarian Item (Resep / Paket) ---
+    searchInput.addEventListener('keyup', async function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            suggestionsBox.classList.add('hidden');
+            return;
+        }
+        try {
+            const response = await fetch(`ajax/ajax_order_items.php?q=${encodeURIComponent(query)}`);
+            const items = await response.json();
+            if (items.length > 0) {
+                suggestionsBox.innerHTML = items.map(item => `
+                    <div class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer item-suggestion border-b border-gray-100 dark:border-gray-600" data-item='${JSON.stringify(item)}'>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-sm">${item.nama}</p>
+                                <span class="text-xs text-gray-500 capitalize bg-gray-200 dark:bg-gray-600 px-1 rounded">${item.tipe}</span>
+                            </div>
+                            <p class="font-bold text-sm text-primary">${formatRupiah(item.harga_jual)}</p>
+                        </div>
+                    </div>
+                `).join('');
+                suggestionsBox.classList.remove('hidden');
+            } else {
+                suggestionsBox.classList.add('hidden');
+            }
+        } catch (error) { console.error('Error fetching items:', error); }
+    });
+
+    suggestionsBox.addEventListener('click', function(e) {
+        const itemDiv = e.target.closest('.item-suggestion');
+        if (itemDiv) {
+            const itemData = JSON.parse(itemDiv.dataset.item);
+            addItemToTable(itemData);
+            searchInput.value = '';
+            suggestionsBox.classList.add('hidden');
+        }
+    });
+
+    // --- 3. Fungsi Tambah Item ke Tabel ---
+    function addItemToTable(item) {
+        emptyMsg.style.display = 'none';
+        
+        // Generate ID unik untuk array PHP
+        const uniqueId = `${item.id}_${item.tipe}_${Date.now()}`; 
+        const subtotal = item.harga_jual * 1; 
+
+        const row = document.createElement('tr');
+        row.className = 'item-row border-t border-gray-200 dark:border-gray-700';
+        row.dataset.subtotal = subtotal;
+
+        row.innerHTML = `
+            <td class="p-2">
+                <p class="font-semibold text-sm">${item.nama}</p>
+                <p class="text-xs text-gray-500 capitalize">${item.tipe}</p>
+                <input type="hidden" name="items[${uniqueId}][tipe_item]" value="${item.tipe}">
+                <input type="hidden" name="items[${uniqueId}][item_id]" value="${item.id}">
+                <input type="hidden" name="items[${uniqueId}][nama_item]" value="${item.nama}">
+                <input type="hidden" name="items[${uniqueId}][hpp_per_item]" value="${item.hpp}">
+                <input type="hidden" name="items[${uniqueId}][harga_jual_per_item]" value="${item.harga_jual}">
+            </td>
+            <td class="p-2">
+                <input type="number" name="items[${uniqueId}][jumlah]" value="1" min="1" class="item-jumlah w-full h-10 p-2 rounded-md bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-center">
+            </td>
+            <td class="p-2 text-right text-sm">
+                ${formatRupiah(item.harga_jual)}
+            </td>
+            <td class="p-2 text-right font-semibold subtotal-display">
+                ${formatRupiah(subtotal)}
+            </td>
+            <td class="p-2 text-center">
+                <button type="button" class="remove-item-btn text-red-500 font-bold text-xl hover:text-red-700">&times;</button>
+            </td>
+        `;
+
+        itemsContainer.appendChild(row);
+        addRowEventListeners(row);
+        updateGrandTotal();
+    }
+
+    // --- 4. Fungsi Event Listener Row (Update Jumlah & Hapus) ---
+    function addRowEventListeners(row) {
+        const jumlahInput = row.querySelector('.item-jumlah');
+        const removeBtn = row.querySelector('.remove-item-btn');
+        const subtotalDisplay = row.querySelector('.subtotal-display');
+        const hargaSatuan = parseFloat(row.querySelector('input[name*="[harga_jual_per_item]"]').value);
+
+        jumlahInput.addEventListener('input', function() {
+            const jumlah = parseInt(this.value) || 0;
+            const newSubtotal = jumlah * hargaSatuan;
+            row.dataset.subtotal = newSubtotal;
+            subtotalDisplay.textContent = formatRupiah(newSubtotal);
+            updateGrandTotal();
+        });
+
+        removeBtn.addEventListener('click', function() {
+            row.remove();
+            updateGrandTotal();
+        });
+    }
+
+    // --- 5. Fungsi Hitung Total & Utilitas Lain ---
+    function checkEmpty(){
+        const rowCount = itemsContainer.querySelectorAll('.item-row').length;
+        emptyMsg.style.display = rowCount > 0 ? 'none' : 'block';
+    }
+
+    function updateGrandTotal() {
+        let total = 0;
+        
+        // Hitung total dari item
+        itemsContainer.querySelectorAll('.item-row').forEach(row => {
+            total += parseFloat(row.dataset.subtotal) || 0;
+        });
+
+        // Hitung total dari biaya tambahan (expenses)
+        expenseContainer.querySelectorAll('.expense-jumlah').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+
+        grandTotalEl.textContent = formatRupiah(total);
+        checkEmpty();
+    }
+
+    // Biaya Tambahan
+    addExpenseBtn.addEventListener('click', function() {
+        const row = document.createElement('tr');
+        row.className = 'expense-row border-t border-gray-200 dark:border-gray-700';
+        row.innerHTML = `
+            <td class="p-2">
+                <input type="text" name="expenses[deskripsi][]" class="w-full h-10 p-2 rounded-md bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary" placeholder="Deskripsi">
+            </td>
+            <td class="p-2">
+                <input type="number" name="expenses[jumlah][]" class="expense-jumlah w-full h-10 p-2 rounded-md bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-right" placeholder="0">
+            </td>
+            <td class="p-2 text-center">
+                <button type="button" class="remove-expense-btn text-red-500 font-bold text-xl hover:text-red-700">&times;</button>
+            </td>
+        `;
+        expenseContainer.appendChild(row);
+        
+        // Listener untuk baris expense baru
+        row.querySelector('.expense-jumlah').addEventListener('input', updateGrandTotal);
+        row.querySelector('.remove-expense-btn').addEventListener('click', function() {
+            row.remove();
+            updateGrandTotal();
+        });
+    });
+
+    // Pasang listener untuk elemen expense yang sudah ada (saat edit)
+    document.querySelectorAll('.expense-row').forEach(row => {
+        const input = row.querySelector('.expense-jumlah');
+        const btn = row.querySelector('.remove-expense-btn');
+        if(input) input.addEventListener('input', updateGrandTotal);
+        if(btn) btn.addEventListener('click', () => { row.remove(); updateGrandTotal(); });
+    });
+
+    // Pasang listener untuk item yang sudah ada (saat edit)
+    document.querySelectorAll('.item-row').forEach(row => {
+        addRowEventListeners(row);
+    });
+
+    // Tutup suggestion box jika klik di luar
     document.addEventListener('click', function(event) {
         if (!customerSuggestionsBox.contains(event.target) && event.target !== customerNameInput) {
             customerSuggestionsBox.classList.add('hidden');
@@ -272,8 +417,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     
-    updateGrandTotal(); 
+    // Inisialisasi awal
+    updateGrandTotal();
 });
 </script>
+
 </body>
 </html>

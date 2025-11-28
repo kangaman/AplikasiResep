@@ -72,7 +72,8 @@ $user_id = $_SESSION['user_id'];
                 <thead class="bg-subtle-light dark:bg-gray-800">
                     <tr>
                         <th class="p-3 text-left text-sm font-bold uppercase">Nama Item</th>
-                        <th class="p-3 text-right text-sm font-bold uppercase">Modal (HPP)</th>
+                        <th class="p-3 text-center text-sm font-bold uppercase w-24">Jumlah</th>
+                        <th class="p-3 text-right text-sm font-bold uppercase">Total Modal</th>
                         <th class="p-3 text-center text-sm font-bold uppercase">Aksi</th>
                     </tr>
                 </thead>
@@ -149,11 +150,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const biayaTransportasi = checkboxTransportasi.checked ? (parseFloat(biayaTransportasiInput.value) || 0) : 0;
         
-        // --- LOGIKA PERHITUNGAN YANG DIPERBAIKI ---
         const totalModalPerBox = state.hppPerBox;
         const totalModalPesanan = (totalModalPerBox * jumlahPesanan) + biayaTransportasi;
         const totalPemasukan = hargaJual * jumlahPesanan;
-        const totalKeuntungan = totalPemasukan - totalModalPesanan; // Ini adalah keuntungan bersih yang benar
+        const totalKeuntungan = totalPemasukan - totalModalPesanan;
 
         document.getElementById('sim-total-modal').textContent = formatRupiah(totalModalPesanan);
         document.getElementById('sim-total-pemasukan').textContent = formatRupiah(totalPemasukan);
@@ -161,7 +161,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateSummary() {
-        state.hppPerBox = Array.from(tabelBody.querySelectorAll('tr')).reduce((acc, row) => acc + (parseFloat(row.dataset.hpp) || 0), 0);
+        state.hppPerBox = Array.from(tabelBody.querySelectorAll('tr')).reduce((acc, row) => {
+            // HPP sekarang diambil dari subtotal baris tersebut (Harga Satuan * Jumlah)
+            const subtotal = parseFloat(row.dataset.subtotal) || 0;
+            return acc + subtotal;
+        }, 0);
+
         const hargaJual = parseFloat(hargaJualInput.value) || 0;
         const keuntungan = hargaJual - state.hppPerBox;
         const margin = state.hppPerBox > 0 ? (keuntungan / state.hppPerBox) * 100 : 0;
@@ -174,16 +179,54 @@ document.addEventListener('DOMContentLoaded', function () {
         return state.hppPerBox;
     }
 
-    // ... (Sisa kode JavaScript dari respons sebelumnya tidak berubah dan tetap valid)
-    // Salin semua fungsi dan event listener lain dari kode sebelumnya ke sini
+    // --- MODIFIKASI UTAMA DI SINI: MENAMBAHKAN INPUT JUMLAH ---
     function addItemToTable(item) {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 dark:border-gray-700';
+        
+        // Kita simpan HPP Satuan Asli di dataset untuk perhitungan
+        const hppSatuan = parseFloat(item.hpp);
+        const defaultQty = 1;
+        const initialSubtotal = hppSatuan * defaultQty;
+        
         row.dataset.item = JSON.stringify(item);
-        row.dataset.hpp = item.hpp;
-        row.innerHTML = `<td class="p-3">${item.nama} <span class="text-xs ${item.tipe === 'resep' ? 'text-blue-500' : 'text-gray-500'}">(${item.tipe})</span></td><td class="p-3 text-right">${formatRupiah(item.hpp)}</td><td class="p-3 text-center"><button class="hapus-item text-red-500 font-bold text-lg">&times;</button></td>`;
+        row.dataset.hppSatuan = hppSatuan;
+        row.dataset.subtotal = initialSubtotal; 
+        
+        row.innerHTML = `
+            <td class="p-3">
+                ${item.nama} 
+                <span class="text-xs ${item.tipe === 'resep' ? 'text-blue-500' : 'text-gray-500'}">(${item.tipe})</span>
+                <div class="text-xs text-gray-400">@ ${formatRupiah(hppSatuan)}</div>
+            </td>
+            <td class="p-3 text-center">
+                <input type="number" value="${defaultQty}" min="0.1" step="0.1" class="qty-input w-16 h-8 p-1 text-center text-sm border rounded bg-input-light dark:bg-input-dark dark:border-gray-600">
+            </td>
+            <td class="p-3 text-right font-semibold subtotal-display">${formatRupiah(initialSubtotal)}</td>
+            <td class="p-3 text-center">
+                <button class="hapus-item text-red-500 font-bold text-lg">&times;</button>
+            </td>`;
+        
         tabelBody.appendChild(row);
-        row.querySelector('.hapus-item').addEventListener('click', () => { row.remove(); updateSummary(); });
+
+        // Event Listener untuk Hapus
+        row.querySelector('.hapus-item').addEventListener('click', () => { 
+            row.remove(); 
+            updateSummary(); 
+        });
+
+        // Event Listener untuk Ubah Jumlah
+        const qtyInput = row.querySelector('.qty-input');
+        const subtotalDisplay = row.querySelector('.subtotal-display');
+
+        qtyInput.addEventListener('input', function() {
+            const qty = parseFloat(this.value) || 0;
+            const newSubtotal = hppSatuan * qty;
+            row.dataset.subtotal = newSubtotal;
+            subtotalDisplay.textContent = formatRupiah(newSubtotal);
+            updateSummary();
+        });
+
         updateSummary();
     }
     
@@ -214,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const res = await fetch(`ajax/ajax_snackbox.php?action=search_items&q=${encodeURIComponent(query)}`);
             const result = await res.json();
             if (result.status === 'success' && result.items.length > 0) {
-                suggestionsBox.innerHTML = result.items.map(item => `<div class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer suggestion-item" data-item='${JSON.stringify(item)}'><p class="font-semibold">${item.nama}</p><small class="text-primary">${formatRupiah(item.hpp)} / pcs</small></div>`).join('');
+                suggestionsBox.innerHTML = result.items.map(item => `<div class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer suggestion-item" data-item='${JSON.stringify(item)}'><p class="font-semibold">${item.nama}</p><small class="text-primary">${formatRupiah(item.hpp)} / pcs (atau satuan)</small></div>`).join('');
                 suggestionsBox.classList.remove('hidden');
             } else { suggestionsBox.classList.add('hidden'); }
         } catch (e) { console.error(e); suggestionsBox.classList.add('hidden'); }
@@ -247,8 +290,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 kalkulatorTitle.textContent = `Edit: ${data.nama_paket}`;
                 namaPaketInput.value = data.nama_paket;
                 hargaJualInput.value = data.harga_jual;
-                tabelBody.innerHTML = ''; // Pastikan tabel dikosongkan
-                data.isi.forEach(item => addItemToTable({nama: item.nama_item, tipe: item.tipe_item, hpp: item.hpp_per_item}));
+                tabelBody.innerHTML = ''; 
+                
+                // Saat edit, kita asumsikan jumlahnya 1 karena DB sebelumnya tidak menyimpan jumlah
+                // HPP yang tersimpan di DB dianggap sebagai TOTAL untuk item itu
+                data.isi.forEach(item => {
+                    // Rekonstruksi objek item untuk fungsi addItem
+                    const itemObj = {
+                        nama: item.nama_item, 
+                        tipe: item.tipe_item, 
+                        hpp: item.hpp_per_item // Ini adalah total HPP dari DB
+                    };
+                    addItemToTable(itemObj);
+                });
             }
         } else if (target.classList.contains('btn-hapus')) {
             if (confirm(`Yakin ingin menghapus paket "${nama}"?`)) {
@@ -284,7 +338,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.getElementById('simpan-paket').addEventListener('click', async () => {
-        const isi = Array.from(tabelBody.querySelectorAll('tr')).map(row => JSON.parse(row.dataset.item));
+        // Saat simpan, kita ambil total HPP yang sudah dikalikan jumlah (dataset.subtotal)
+        const isi = Array.from(tabelBody.querySelectorAll('tr')).map(row => {
+            let itemData = JSON.parse(row.dataset.item);
+            // Update HPP itemData dengan nilai subtotal (Harga x Jumlah) agar tersimpan benar di DB
+            itemData.hpp = parseFloat(row.dataset.subtotal); 
+            return itemData;
+        });
+        
         const payload = { action: 'save_paket', id: state.paketId, nama_paket: namaPaketInput.value, harga_jual: parseFloat(hargaJualInput.value), total_hpp: updateSummary(), isi: isi };
         if (!payload.nama_paket || !payload.harga_jual || payload.isi.length === 0) {
             alert('Harap isi nama paket, harga jual, dan tambahkan minimal satu item.');

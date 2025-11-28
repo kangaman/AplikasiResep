@@ -1,11 +1,22 @@
 <?php
-include __DIR__ . '/includes/header.php';
-if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
+// 1. Inisialisasi Session & Config DULUAN (Sebelum ada HTML)
+// Kita panggil manual di sini agar bisa memproses data sebelum header.php dimuat
+session_start();
+include __DIR__ . '/config/config.php';
 
+// 2. Cek Login
+if (!isset($_SESSION['user_id'])) { 
+    header("Location: index.php"); 
+    exit(); 
+}
+
+$user_id = $_SESSION['user_id'];
 $pesan = '';
 $customer_edit = null;
 
-// Logika Simpan / Update Pelanggan
+// --- LOGIKA PROSES DATA (Dipindah ke Atas) ---
+
+// A. Logika Simpan / Update Pelanggan
 if (isset($_POST['simpan_pelanggan'])) {
     $id = $_POST['customer_id'];
     $nama = trim($_POST['nama_pelanggan']);
@@ -18,31 +29,35 @@ if (isset($_POST['simpan_pelanggan'])) {
         if (empty($id)) { // INSERT BARU
             $stmt = $conn->prepare("INSERT INTO customers (user_id, nama_pelanggan, kontak, alamat) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("isss", $user_id, $nama, $kontak, $alamat);
-            $pesan = "Pelanggan baru berhasil ditambahkan!";
+            $msg_text = "Pelanggan baru berhasil ditambahkan!";
         } else { // UPDATE
             $stmt = $conn->prepare("UPDATE customers SET nama_pelanggan=?, kontak=?, alamat=? WHERE id=? AND user_id=?");
             $stmt->bind_param("sssii", $nama, $kontak, $alamat, $id, $user_id);
-            $pesan = "Data pelanggan berhasil diperbarui!";
+            $msg_text = "Data pelanggan berhasil diperbarui!";
         }
         $stmt->execute();
         $stmt->close();
-        header("Location: manajemen_pelanggan.php?pesan=" . urlencode($pesan));
+        
+        // Redirect AMAN di sini karena belum ada HTML yang dicetak
+        header("Location: manajemen_pelanggan.php?pesan=" . urlencode($msg_text));
         exit();
     }
 }
 
-// Logika Hapus Pelanggan
+// B. Logika Hapus Pelanggan
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
     $stmt = $conn->prepare("DELETE FROM customers WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $id, $user_id);
     $stmt->execute();
     $stmt->close();
+    
+    // Redirect AMAN
     header("Location: manajemen_pelanggan.php?pesan=" . urlencode("Pelanggan berhasil dihapus."));
     exit();
 }
 
-// Logika untuk Mode Edit
+// C. Logika Ambil Data untuk Mode Edit
 if (isset($_GET['edit'])) {
     $id = (int)$_GET['edit'];
     $stmt = $conn->prepare("SELECT * FROM customers WHERE id = ? AND user_id = ?");
@@ -52,7 +67,7 @@ if (isset($_GET['edit'])) {
     $stmt->close();
 }
 
-// Ambil semua data pelanggan
+// D. Ambil semua data pelanggan untuk tabel
 $customers = [];
 $stmt_all = $conn->prepare("SELECT * FROM customers WHERE user_id = ? ORDER BY nama_pelanggan ASC");
 $stmt_all->bind_param("i", $user_id);
@@ -63,10 +78,16 @@ if($result) {
 }
 $stmt_all->close();
 
+// E. Tangkap pesan dari URL (hasil redirect)
 if (isset($_GET['pesan'])) {
     $pesan = "<div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4' role='alert'>" . htmlspecialchars($_GET['pesan']) . "</div>";
 }
+
+// --- AKHIR LOGIKA PHP ---
+// Sekarang baru aman untuk memanggil header yang berisi HTML
+include __DIR__ . '/includes/header.php'; 
 ?>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
